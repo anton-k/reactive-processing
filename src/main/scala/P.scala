@@ -1,3 +1,5 @@
+package rea
+
 import processing.core._
 
 object P {
@@ -41,10 +43,20 @@ object P {
 	// Color settings
 
 	def background(c: Color) 	{ app.background(c.toProc) }	
-	def fill(c: Color) 			{ app.noStroke(); app.fill(c.toProc) }	
-	def stroke(c: Color) 		{ app.noFill(); app.stroke(c.toProc) }
+	def fill(c: Color) 			{ app.fill(c.toProc) }	
+	def stroke(c: Color) 		{ app.stroke(c.toProc) }
+	def noStroke				{ app.noStroke() }
+	def noFill					{ app.noFill() }
 	def fillStroke(c1: Color, c2: Color) { app.fill(c1.toProc); app.stroke(c2.toProc) }
 	def strokeWeight(w: Int)	{ app.strokeWeight(w) }
+
+	// original
+
+	def fill(r: Float, g: Float, b:Float) { app.fill(r, g, b) }	
+	def stroke(r: Float, g: Float, b:Float) { app.stroke(r, g, b) }	 
+
+	def fill(r: Float) { app.fill(r) }	
+	def stroke(r: Float) { app.stroke(r) }	 
 
 	// 2D primitives
 	
@@ -56,6 +68,11 @@ object P {
 	def quad(p1: Vec, p2: Vec, p3: Vec, p4: Vec) { app.quad(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, p4.x, p4.y) }
 	def rect(p: Vec, s: Vec)	{ app.rect(p.x, p.y, s.x, s.y) }
 	def triangle(p1: Vec, p2: Vec, p3: Vec) { app.triangle(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y) }
+
+	def rect(x: Float, y: Float, w: Float, h: Float) { app.rect(x, y, w, h) }
+	def ellipse(x: Float, y: Float, w: Float, h: Float) { app.ellipse(x, y, w, h) }
+	def circle(x: Float, y: Float, rad: Float) { ellipseModeCenter; app.ellipse(x, y, rad*2, rad*2) }
+	def line(x1: Float, y1: Float, x2: Float, y2: Float) { app.line(x1, y1, x2, y2) }
 
 	// 3D primitives
 
@@ -206,22 +223,26 @@ object P {
 
 	case class Win(
 		name: String = "App", 
-		sizes: Vec = Vec(500, 500), 
+		size: Vec = Vec(500, 500), 
 		bkg: Color = Color.white, 
 		clear: Boolean = true, 
 		renderer: Renderer = DefaultRenderer,
-		fonts: Seq[Font] = Seq()) {
+		fonts: Seq[Font] = Seq(),
+		frameRate: Int = 60) {
 
 		def run(getter: Get[Unit]) {
 			def newSetups() { 
 				background(bkg)
 				renderer match {
-					case DefaultRenderer => app.size(sizes.x.toInt, sizes.y.toInt)
-					case P2D => app.size(sizes.x.toInt, sizes.y.toInt, PConstants.P2D)
-					case P3D => app.size(sizes.x.toInt, sizes.y.toInt, PConstants.P3D)
-					case OpenGL => app.size(sizes.x.toInt, sizes.y.toInt, PConstants.OPENGL)
+					case DefaultRenderer => app.size(size.x.toInt, size.y.toInt)
+					case P2D => app.size(size.x.toInt, size.y.toInt, PConstants.P2D)
+					case P3D => app.size(size.x.toInt, size.y.toInt, PConstants.P3D)
+					case OpenGL => app.size(size.x.toInt, size.y.toInt, PConstants.OPENGL)
 				}
 				fonts.foreach(_.init)
+				if (frameRate != 60) {
+					app.frameRate(frameRate)
+				}
 			}				 
 
 			def newDraws()  { 
@@ -241,13 +262,17 @@ object P {
 				case e: Throwable => app.dispose()
 			}
 		}
+
+		def run(): Unit = run(mouse.map(x => {}))
+
+		def run(act: => Unit): Unit = run(mouse.map(x => act))
 	}
 
 	// -----------------------------------------------------------------------------------
 	// colors
 
-	case class Color(red: Float, green: Float, blue: Float, alpha: Float = 1) {
-		def toProc = app.color(255 * red, 255 * green, 255 * blue, 255 * alpha)
+	case class Color(red: Float, green: Float, blue: Float, alpha: Float = 255) {
+		def toProc = app.color(red, green, blue, alpha)
 	}
 
 	object Color {
@@ -255,14 +280,14 @@ object P {
 		def apply(a: Float, b: Float): Color = Color(a, a, a, b)
 
 		def rnd(): Get[Color] = 
-			Get.lift((r: Float, g: Float, b: Float) => Color(r, g, b), Get.rnd(), Get.rnd(), Get.rnd())
+			Get.lift((r: Float, g: Float, b: Float) => Color(r, g, b), Get.rnd(255), Get.rnd(255), Get.rnd(255))
 
 		def rndAlpha(): Get[Color] = 
-			Get.lift((r: Float, g: Float, b: Float, a: Float) => Color(r, g, b, a), Get.rnd(), Get.rnd(), Get.rnd(), Get.rnd())
+			Get.lift((r: Float, g: Float, b: Float, a: Float) => Color(r, g, b, a), Get.rnd(255), Get.rnd(255), Get.rnd(255), Get.rnd(255))
 
 		def black() = Color(0)
 
-		def white() = Color(1)
+		def white() = Color(255)
 	}
 
 	object Brush {

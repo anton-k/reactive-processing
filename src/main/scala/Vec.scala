@@ -1,3 +1,4 @@
+package rea
 
 object Vec {
 	def apply(a: Float): Vec = Vec(a, a)

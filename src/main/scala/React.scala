@@ -1,3 +1,4 @@
+package rea
 
 import scala.collection.mutable.{ListBuffer, Buffer}
 import toxi.math.noise.PerlinNoise
