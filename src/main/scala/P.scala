@@ -9,10 +9,22 @@ object P {
 
 	private var setups = () => {}
 	private var draws  = () => {}
+	private var customSetup = () => {}
 
 	private val app = new PApplet {
 		override def setup = setups()
 		override def draw  = draws()
+	}
+
+	private def runApp(name: String, newSetups: () => Unit, newDraws: () => Unit) {
+		setups = newSetups
+		draws  = newDraws
+
+		try {
+			PApplet.runSketch(Array(name), app)
+		} catch {
+			case e: Throwable => app.dispose()
+		}
 	}
 
 	// ---------------------------------------------------------------------------
@@ -23,6 +35,11 @@ object P {
 	// ---------------------------------------------------------------------------
 	// processing primitives
 	
+	// structure
+
+	def noLoop = { app.noLoop() }
+	def loop   = { app.loop() }
+
 	// attributes
 
 	def ellipseMode(a: Int) { app.ellipseMode(a) }
@@ -61,6 +78,7 @@ object P {
 	// 2D primitives
 	
 	def ellipse(p: Vec, s: Vec) { app.ellipse(p.x, p.y, s.x, s.y) }	
+	def arc(p: Vec, s: Vec, start: Float, stop: Float) { arc(p.x, p.y, s.x, s.y, start, stop) }
 	def line(p1: Vec, p2: Vec)  { app.line(p1.x, p1.y, p2.x, p2.y) }	
 	def line(p1: Vec3, p2: Vec3)  { app.line(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z) }
 	def point(p: Vec)			{ app.point(p.x, p.y) }	
@@ -69,15 +87,40 @@ object P {
 	def rect(p: Vec, s: Vec)	{ app.rect(p.x, p.y, s.x, s.y) }
 	def triangle(p1: Vec, p2: Vec, p3: Vec) { app.triangle(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y) }
 
+	def point(x: Float, y: Float) { app.point(x, y) }
+	def point(x: Float, y: Float, z: Float) { app.point(x, y, z) }
 	def rect(x: Float, y: Float, w: Float, h: Float) { app.rect(x, y, w, h) }
 	def ellipse(x: Float, y: Float, w: Float, h: Float) { app.ellipse(x, y, w, h) }
+	def arc(x: Float, y: Float, w: Float, h: Float, start: Float, stop: Float) { app.arc(x, y, w, h, fromTau(start), fromTau(stop)) }
+
 	def circle(x: Float, y: Float, rad: Float) { ellipseModeCenter; app.ellipse(x, y, rad*2, rad*2) }
 	def line(x1: Float, y1: Float, x2: Float, y2: Float) { app.line(x1, y1, x2, y2) }
-
+	def triangle(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float) { app.triangle(x1, y1, x2, y2, x3, y3) }
+	def quad(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, x4: Float, y4: Float) { app.quad(x1, y1, x2, y2, x3, y3, x4, y4) }
+	
 	// 3D primitives
 
 	def box(size: Float)		{ app.box(size) }	
 	def sphere(r: Float)		{ app.sphere(r) }
+
+	// Vertex
+
+	def beginShape = { app.beginShape() }
+	def endShape   = { app.endShape() }
+	def endShapeClose = { app.endShape(PConstants.CLOSE) }
+
+	def vertex(x: Float, y: Float) = { app.vertex(x, y) }
+	def vertex(x: Float, y: Float, z: Float) = { app.vertex(x, y, z) }
+	def vertex(p: Vec): Unit = vertex(p.x, p.y)
+	def vertex(p: Vec3): Unit = vertex(p.x, p.y, p.z)
+
+	// Curve
+
+	def bezier(x1: Float, y1: Float, x2: Float, y2: Float, x3: Float, y3: Float, x4: Float, y4: Float) { app.bezier(x1, y1, x2, y2, x3, y3, x4, y4) }
+	def bezier(x1: Float, y1: Float, z1: Float, x2: Float, y2: Float, z2: Float, x3: Float, y3: Float, z3: Float, x4: Float, y4: Float, z4: Float) { app.bezier(x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4) }
+
+	def bezier(p1: Vec, p2: Vec, p3: Vec, p4: Vec) { app.bezier(p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, p4.x, p4.y) }
+	def bezier(p1: Vec3, p2: Vec3, p3: Vec3, p4: Vec3) { app.bezier(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z, p3.x, p3.y, p3.z, p4.x, p4.y, p4.z) }
 
 	// Transform
 
@@ -86,6 +129,11 @@ object P {
 	def translate(v: Vec)		{ app.translate(v.x, v.y) }
 	def translate(v: Vec3)		{ app.translate(v.x, v.y, v.z) }
 	def rotate(angle: Float)	{ app.rotate(fromTau(angle)) }
+	def rotateX(angle: Float)	{ app.rotateX(fromTau(angle)) }
+	def rotateY(angle: Float)	{ app.rotateY(fromTau(angle)) }
+	def rotateZ(angle: Float)	{ app.rotateZ(fromTau(angle)) }
+	def rotate(v: Vec3)			{ rotateX(v.x); rotateY(v.y); rotateZ(v.z) }
+	def rotate(a: Float, v: Vec3) { app.rotate(fromTau(a), v.x, v.y, v.z) }
 	def scale(r: Float)			{ app.scale(r) }
 	def scale(v: Vec)			{ app.scale(v.x, v.y) }
 	def scale(v: Vec3)			{ app.scale(v.x, v.y, v.z) }
@@ -94,8 +142,14 @@ object P {
 	// Input
 
 	// Mouse
-	def mouse: Get[Vec] 		= Vec(Get.ask(app.mouseX.toFloat), Get.ask(app.mouseY.toFloat))
-	def pmouse: Get[Vec]		= Vec(Get.ask(app.pmouseX.toFloat), Get.ask(app.pmouseY.toFloat))	
+	def mouse: Get[Vec] 		= Vec(mouseX, mouseY)	
+	def pmouse: Get[Vec]		= Vec(pmouseX, pmouseY)	
+
+	def mouseY: Get[Float]		= Get.ask(app.mouseY.toFloat)
+	def mouseX: Get[Float]		= Get.ask(app.mouseX.toFloat)
+	def pmouseY: Get[Float]		= Get.ask(app.pmouseY.toFloat)
+	def pmouseX: Get[Float]		= Get.ask(app.pmouseX.toFloat)
+
 
 	def mousePressed: Evt[Vec]  = Evt(app.mousePressed, Vec(app.mouseX.toFloat, app.mouseY.toFloat))
 
@@ -113,6 +167,11 @@ object P {
 	def month: Get[Int] 	= Get.ask(PApplet.month())
 	def second: Get[Int] 	= Get.ask(PApplet.second())
 	def year: Get[Int] 		= Get.ask(PApplet.year())
+
+	// ---------------------------------------------------------------------------
+	// Lights and camera
+
+	def lights = { app.lights() }
 
 	// ---------------------------------------------------------------------------
 	// Typography
@@ -202,6 +261,22 @@ object P {
 		act		
 	}
 
+	def inSpace(v: Vec)(act: => Unit) = withMatrix {
+		translate(v)		
+		act		
+	}
+
+	def inSpace(v: Vec3)(act: => Unit) = withMatrix {
+		translate(v)		
+		act		
+	}
+
+	def inSpace(v: Vec3, angle: Vec3)(act: => Unit) = withMatrix {
+		translate(v)		
+		rotate(angle)
+		act		
+	}
+
 	def withMatrix(act: => Unit) {
 		pushMatrix
 			act
@@ -215,57 +290,70 @@ object P {
 	// ---------------------------------------------------------------------------
 	//
 
-	trait Renderer
-	case object DefaultRenderer extends Renderer
-	case object P2D extends Renderer
-	case object P3D extends Renderer
-	case object OpenGL extends Renderer
+	trait Renderer {
+		def toProc: String
+	}
+	case object DefaultRenderer extends Renderer { def toProc = "" }
+	case object P2D 			extends Renderer { def toProc = PConstants.P2D }
+	case object P3D 			extends Renderer { def toProc = PConstants.P3D }
+	case object OpenGL 			extends Renderer { def toProc = PConstants.OPENGL }
+	case object PDF				extends Renderer { def toProc = PConstants.PDF }
+
 
 	case class Win(
 		name: String = "App", 
 		size: Vec = Vec(500, 500), 
 		bkg: Color = Color.white, 
 		clear: Boolean = true, 
-		renderer: Renderer = DefaultRenderer,
-		fonts: Seq[Font] = Seq(),
+		renderer: Renderer = DefaultRenderer,		
 		frameRate: Int = 60) {
-
-		def run(getter: Get[Unit]) {
-			def newSetups() { 
-				background(bkg)
-				renderer match {
-					case DefaultRenderer => app.size(size.x.toInt, size.y.toInt)
-					case P2D => app.size(size.x.toInt, size.y.toInt, PConstants.P2D)
-					case P3D => app.size(size.x.toInt, size.y.toInt, PConstants.P3D)
-					case OpenGL => app.size(size.x.toInt, size.y.toInt, PConstants.OPENGL)
-				}
-				fonts.foreach(_.init)
-				if (frameRate != 60) {
-					app.frameRate(frameRate)
-				}
-			}				 
-
-			def newDraws()  { 
-				if (clear) { background(bkg) }
-				if (getter.isAlive) {
-					getter.get
-					getter.step
-				}
-			}
-
-			setups = newSetups
-			draws  = newDraws
-
-			try {
-				PApplet.runSketch(Array(name), app)
-			} catch {
-				case e: Throwable => app.dispose()
-			}
+		
+		private def winSize() = renderer match {
+			case DefaultRenderer => app.size(size.x.toInt, size.y.toInt)
+			case x               => app.size(size.x.toInt, size.y.toInt, x.toProc)
 		}
 
-		def run(): Unit = run(mouse.map(x => {}))
+		private def winInits() {
+			background(bkg)
+			winSize()
+			if (frameRate != 60) {
+				app.frameRate(frameRate)
+			}	
+			customSetup()
+		}
 
-		def run(act: => Unit): Unit = run(mouse.map(x => act))
+		private def runGetter(getter: Get[Unit])() {
+			if (clear) { background(bkg) }
+			if (getter.isAlive) {
+				getter.get
+				getter.step
+			}			
+		}
+
+		def setup(act: => Unit): Win = {
+			def mySetup() {	act }
+			customSetup = mySetup
+			this
+		}
+
+		def run {						
+			runApp(name, winInits, () => {})
+		}
+
+		def run(getter: => Get[Unit]) {
+			runApp(name, winInits, runGetter(getter))
+		}
+
+		def run[A](setup: => A, draw: A => Get[Unit]) {
+			var getter: Get[Unit] = Get.const({})
+
+			def mySetup() {
+				winInits()
+				getter = draw(setup)
+			}			
+
+			runApp(name, mySetup, runGetter(getter))
+		}
 	}
 
 	// -----------------------------------------------------------------------------------
@@ -334,6 +422,18 @@ object P {
 			app.beginContour()
 				ps.foreach(p => app.vertex(p.x, p.y))			
 			app.endContour()
+		}
+
+		def close = {
+			beginShape
+				ps.foreach(vertex)
+			endShapeClose
+		}
+
+		def triangleStrip = {
+			app.beginShape(PConstants.TRIANGLE_STRIP)
+				ps.foreach(vertex)
+			endShape
 		}
 	}
 
@@ -485,8 +585,22 @@ object P {
 	def lerp(a: Vec, b: Vec, k: Float) = a + (b - a) * k
 	def lerp(a: Vec3, b: Vec3, k: Float) = a + (b - a) * k	
 
+	def map(x: Float, a: Float, b: Float, c: Float, d: Float) = c + ((x - a) / (b - a)) * (d - c)
+
 	// -----------------------------------------------------------------------------------
 	// helpers for lifting operations
+
+
+	implicit class Floats(fs: Get[Float]) {
+		def +(that: Float): Get[Float] = fs.map(_ + that)
+		def +(that: Get[Float]): Get[Float] = Get.lift((_:Float) + (_:Float), fs, that)
+		def -(that: Float): Get[Float] = fs.map(_ - that)
+		def -(that: Get[Float]): Get[Float] = Get.lift((_:Float) - (_:Float), fs, that)
+		def *(that: Float): Get[Float] = fs.map(_ * that)
+		def *(that: Get[Float]): Get[Float] = Get.lift((_:Float) * (_:Float), fs, that)
+		def /(that: Float): Get[Float] = fs.map(_ / that)
+		def /(that: Get[Float]): Get[Float] = Get.lift((_:Float) / (_:Float), fs, that)
+	}
 
 	implicit class Vecs(vs: Get[Vec]) {
 		def fromPolar: Get[Vec] = vs.map(_.fromPolar)

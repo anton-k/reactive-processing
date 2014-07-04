@@ -1,6 +1,7 @@
 package rea.examples
 
 import processing.core._
+import rea._
 import P._
 
 

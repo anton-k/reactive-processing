@@ -121,7 +121,7 @@ trait Alive extends Being {
 }
 
 trait NoStep extends Step {
-	def step {}
+	def step = stepOnTick(){}
 	var tick = true	
 }
 
@@ -166,7 +166,7 @@ object Get {
 		def get = mkAsk
 	}
 
-	def const[A](a: A): Get[A] = new Get[A] with Alive with NoStep {
+	def const[A](a: => A): Get[A] = new Get[A] with Alive with NoStep {
 		def get = a		
 	}
 
@@ -202,6 +202,20 @@ object Get {
 	def sequence[A](as: List[Get[A]]): Get[List[A]] = as match {
 		case Nil   => Get.const(Nil)
 		case x::xs => lift((_:A) :: (_:List[A]), x, sequence(xs))
+	}
+
+	def sequenceActs(as: List[Get[Unit]]): Get[Unit] = new Get[Unit] {
+		var tick = true
+
+		def isAlive = as.exists(_.isAlive)
+
+		def step = stepOnTick(as: _*) {
+			as.foreach(_.step)
+		}
+
+		def get = {
+			as.foreach(_.get)
+		}
 	}
 
 	// File input
@@ -276,7 +290,7 @@ case class Evt[+A](stream: Get[Option[A]] = Get.const(None)) {
 	def step[B >: A](s0: B): Get[B] = {
 		def go(s: B, a: Option[A]) = a.getOrElse(s)
 
-		stream.fsm(s0, go, (x: B) => x)
+		Get.fsm(stream, s0, go, (x: B) => x)
 	}
 
 	def map[B](f: A => B): Evt[B] = 
@@ -298,6 +312,9 @@ case class Evt[+A](stream: Get[Option[A]] = Get.const(None)) {
 
 		Get.lift(go, stream, bs)
 	}
+
+	def react(f: A => Unit): Get[Unit] = 
+		stream.map(_.map(f).getOrElse({}))
 }
 
 object Set {
