@@ -53,6 +53,8 @@ case class Vec(x: Float, y: Float) {
 	def mul(that: Get[Vec]): Get[Float] = that.map(x => this.mul(x)) 
 	def dist(that: Get[Vec]): Get[Float] = that.map(x => this.dist(x)) 
 
+	def atan2: Float = ((Math.atan2(y, x) / (2 * Math.PI)).toFloat)
+
 	// polar
 
 	def fromPolar = Vec(x * Math.cos(2 * Math.PI * y).toFloat, x * Math.sin(2 * Math.PI * y).toFloat)

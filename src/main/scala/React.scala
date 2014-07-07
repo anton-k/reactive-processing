@@ -97,6 +97,9 @@ trait Get[+A] extends Getter[A] with Step with Being { self =>
 	def toStream(): Stream[A] = 
 		get #:: { step; this.toStream() }
 
+	def toIterator: Iterator[A] = 
+		this.toStream.toIterator
+
 	def snap(pred: => Boolean): Evt[A] = Evt {
 		def phi(p: Boolean, a: A) = if (p) Some(a) else None 
 
@@ -145,8 +148,8 @@ object Get {
 		def get     = a
 	}
 
-	def move[A](force: => Get[A], s0: A, append: (A, A) => A): Get[A] = 
-		fsm(force, s0, append, (x: A) => x)
+	def move[A,B](force: => Get[A], s0: B, append: (B, A) => B): Get[B] = 
+		fsm(force, s0, append, (x: B) => x)
 
 	def iter[A](a0: A, upd: A => A): Get[A] = new Get[A] with Alive {
 		var a = a0		
@@ -178,9 +181,17 @@ object Get {
 
 	def lin(x: Float, dx: Float) = iter(x, (a: Float) => a + dx)
 
+	def saw(s0: Float, ds: Float, min: Float, max: Float) = Get.iter(s0, (s: Float) => 
+		if (s > max) min 
+		else if (s < min) max
+		else s + ds
+	)
+
 	def rnd(): Get[Float] = gen(new Random(), (x: Random) => x.nextFloat())
 
 	def rnd(a: Float): Get[Float] = rnd().map(_ * a)
+
+	def rnd(a: Float, b: Float): Get[Float] = rnd().map((x: Float) => a + x * (b - a))
 
 	def rndInt(a: Int): Get[Int] = gen(new Random(), (x: Random) => x.nextInt(a))
 

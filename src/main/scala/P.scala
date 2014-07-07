@@ -31,6 +31,7 @@ object P {
 	// converters
 
 	def fromTau(a: Float): Float = PConstants.TWO_PI * a	
+	def toTau(a: Float): Float = a / PConstants.TWO_PI
 
 	// ---------------------------------------------------------------------------
 	// processing primitives
@@ -73,7 +74,13 @@ object P {
 	def stroke(r: Float, g: Float, b:Float) { app.stroke(r, g, b) }	 
 
 	def fill(r: Float) { app.fill(r) }	
-	def stroke(r: Float) { app.stroke(r) }	 
+	def stroke(r: Float) { app.stroke(r) }	
+	def strokeCapRound = { app.strokeCap(PConstants.ROUND) }
+	def strokeCapSquare = { app.strokeCap(PConstants.SQUARE) }
+	def strokeCapProject = { app.strokeCap(PConstants.PROJECT) }
+	def strokeJoinMiter = { app.strokeJoin(PConstants.MITER) }
+	def strokeJoinBevel = { app.strokeJoin(PConstants.BEVEL) }
+	def strokeJoinRound = { app.strokeJoin(PConstants.ROUND) } 
 
 	// 2D primitives
 	
@@ -172,6 +179,43 @@ object P {
 	// Lights and camera
 
 	def lights = { app.lights() }
+
+	// ---------------------------------------------------------------------------
+	// Images
+
+	trait ImageMode {
+		def toProc: Int
+	}
+
+	case object Rgb   extends ImageMode { def toProc = PConstants.RGB	}
+	case object Argb  extends ImageMode { def toProc = PConstants.ARGB	}
+	case object Alpha extends ImageMode { def toProc = PConstants.ALPHA	}
+
+	object Image {
+		def apply(file: String): Image = Image(app.loadImage(file))
+		def apply(w: Int, h: Int, mode: ImageMode): Image = Image(app.createImage(w, h, mode.toProc))
+	}
+
+	case class Image(image: PImage) {
+		def display { app.image(image, 0, 0) }
+		def display(x: Float, y: Float) { app.image(image, x, y) }
+		def display(x: Float, y: Float, w: Float, h: Float) { app.image(image, x, y, w, h) }
+
+		def display(v: Vec) { display(v.x, v.y) }
+		def display(v: Vec, s: Vec) { display(v.x, v.y, s.x, s.y) }
+
+		def width  = image.width
+		def height = image.height
+		def pixels = image.pixels	
+
+		def get(x: Int, y: Int) = Color.fromProc(pixels(y*width+x))
+	}
+
+	def tint(a: Float) { app.tint(a) }
+	def tint(a: Float, alp: Float) { app.tint(a, alp) }
+	def tint(r: Float, g: Float, b: Float) { app.tint(r, g, b) }
+	def tint(r: Float, g: Float, b: Float, a: Float) { app.tint(r, g, b, a) }
+	def tint(c: Color) { tint(c.red, c.green, c.blue, c.alpha) }
 
 	// ---------------------------------------------------------------------------
 	// Typography
@@ -345,14 +389,22 @@ object P {
 		}
 
 		def run[A](setup: => A, draw: A => Get[Unit]) {
-			var getter: Get[Unit] = Get.const({})
+			var getter: Get[Unit] = Get.const({})			
 
 			def mySetup() {
 				winInits()
 				getter = draw(setup)
-			}			
+			}
 
-			runApp(name, mySetup, runGetter(getter))
+			def myDraw() {
+				if (clear) { background(bkg) }
+				if (getter.isAlive) {
+					getter.get
+					getter.step
+				}			
+			}
+
+			runApp(name, mySetup, myDraw)
 		}
 	}
 
@@ -366,6 +418,8 @@ object P {
 	object Color {
 		def apply(a: Float): Color = Color(a, a, a)
 		def apply(a: Float, b: Float): Color = Color(a, a, a, b)
+
+		def fromProc(a: Int): Color = Color(app.red(a).toFloat, app.green(a).toFloat, app.blue(a).toFloat, app.alpha(a).toFloat)
 
 		def rnd(): Get[Color] = 
 			Get.lift((r: Float, g: Float, b: Float) => Color(r, g, b), Get.rnd(255), Get.rnd(255), Get.rnd(255))
@@ -381,7 +435,7 @@ object P {
 	object Brush {
 		def fill(c: Color) = Brush(Some(c), None, None)
 		def stroke(c: Color) = Brush(None, Some(c), None)
-		def strokeWeight(c: Color, w: Int) = Brush(None, Some(c), Some(w))
+		def strokeWeight(c: Color, w: Int) = Brush(None, Some(c), Some(w))		
 		def apply(fill: Color, stroke: Color): Brush = Brush(Some(fill), Some(stroke), None)
 	}
 
@@ -586,6 +640,21 @@ object P {
 	def lerp(a: Vec3, b: Vec3, k: Float) = a + (b - a) * k	
 
 	def map(x: Float, a: Float, b: Float, c: Float, d: Float) = c + ((x - a) / (b - a)) * (d - c)
+
+	def abs(x: Float): Float = Math.abs(x).toFloat
+
+	// trigonometry
+
+	def cos(x: Float): Float = Math.cos(fromTau(x)).toFloat
+	def sin(x: Float): Float = Math.sin(fromTau(x)).toFloat
+	def tan(x: Float): Float = Math.tan(fromTau(x)).toFloat
+
+	def acos(x: Float): Float = toTau(Math.acos(x).toFloat)
+	def asin(x: Float): Float = toTau(Math.asin(x).toFloat)
+	def atan(x: Float): Float = toTau(Math.atan(x).toFloat)
+
+	def atan2(y: Float, x: Float): Float = toTau(Math.atan2(y, x).toFloat)
+
 
 	// -----------------------------------------------------------------------------------
 	// helpers for lifting operations

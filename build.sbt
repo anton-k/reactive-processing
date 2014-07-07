@@ -6,6 +6,6 @@ scalaVersion := "2.10.3"
 
 fork := true
 
-initialCommands in console := "Main.main(Array())"
+// initialCommands in console := "Main.main(Array())"
 
-cleanupCommands in console := "Test.dispose()"
+// cleanupCommands in console := "Test.dispose()"
