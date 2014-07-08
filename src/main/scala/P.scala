@@ -75,6 +75,7 @@ object P {
 
 	def fill(r: Float) { app.fill(r) }	
 	def stroke(r: Float) { app.stroke(r) }	
+	def stroke(r: Float, a: Float) { app.stroke(r, a) }	
 	def strokeCapRound = { app.strokeCap(PConstants.ROUND) }
 	def strokeCapSquare = { app.strokeCap(PConstants.SQUARE) }
 	def strokeCapProject = { app.strokeCap(PConstants.PROJECT) }
@@ -220,11 +221,23 @@ object P {
 	// ---------------------------------------------------------------------------
 	// Typography
 
-	trait Font {
-		var font: PFont
 
-		def init: Unit
+	object Font {
 
+		private def createAndSet(font: PFont) = {
+			app.textFont(font)
+			font
+		}
+
+		def apply(file: String): Font = Font(createAndSet(app.loadFont(file)))
+
+		def apply(name: String, size: Int, smooth: Boolean = true): Font = 
+			Font(createAndSet(app.createFont(name, size, smooth)))
+		
+
+	}
+
+	case class Font(font: PFont) {
 		def set {
 			app.textFont(font)
 		}
@@ -233,26 +246,18 @@ object P {
 			this.set
 			app.text(msg, pos.x, pos.y)
 		}
+
+		def textSize(msg: String): Vec = {
+			this.set
+			Vec(textWidth(msg), textAscent + textDescent)
+		}
 	}
 
-	object Font {
-		def create(name: String, size: Int = 16, smooth: Boolean = true) = new Font {
-			var font: PFont = null
+	def textAscent = { app.textAscent() }
+	def textDescent = { app.textDescent() }
 
-			def init {
-				font = app.createFont(name, size, smooth)
-				app.textFont(font)
-			}			
-		}
-
-		def load(file: String) = new Font {
-			var font: PFont = null 
-
-			def init {
-				font = app.loadFont(file)
-				app.textFont(font)
-			}			
-		}
+	def text(msg: String, x: Float, y: Float) {
+		app.text(msg, x, y)
 	}
 
 	def text(msg: String, pos: Vec) {
@@ -676,10 +681,13 @@ object P {
 		def toPolar: Get[Vec] = vs.map(_.toPolar)
 		def normalize: Get[Vec] = vs.map(_.normalize)
 		def magnitude: Get[Float] = vs.map(_.magnitude)
+		def atan2: Get[Float] = vs.map(_.atan2)
+		def l1: Get[Float] = vs.map(_.l1)
 
 		def +(that: Vec): Get[Vec] = vs.map(_ + that)
 		def +(that: Get[Vec]):Get[Vec] = Get.lift((_:Vec) + (_: Vec), vs, that)
 		def -(that: Vec): Get[Vec] = vs.map(_ - that)
+		def unary_- : Get[Vec] = vs.map(x => -x)
 		def -(that: Get[Vec]):Get[Vec] = Get.lift((_:Vec) - (_: Vec), vs, that)
 		def *(that: Float): Get[Vec] = vs.map(_ * that)
 		def *(that: Vec): Get[Vec] = vs.map(_ * that)
@@ -688,9 +696,11 @@ object P {
 		def /(that: Get[Float]):Get[Vec] = Get.lift((_:Vec) / (_: Float), vs, that)
 
 		def dist(that: Vec): Get[Float] = vs.map(_.dist(that))
+		def l1(that: Vec): Get[Float] = vs.map(_.l1(that))
 		def dist(that: Get[Vec]):Get[Float] = Get.lift((_:Vec).dist(_: Vec), vs, that)
 		def mul(that: Vec): Get[Float] = vs.map(_.dist(that))
 		def mul(that: Get[Vec]):Get[Float] = Get.lift((_:Vec).mul(_: Vec), vs, that)
+
 	}
 
 	implicit class Vec3s(vs: Get[Vec3]) {

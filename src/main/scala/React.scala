@@ -131,22 +131,27 @@ trait NoStep extends Step {
 
 object Get {
 
-	def fsm[S,A,B](tape: => Get[A], s0: S, f: (S,A) => S, g: S => B): Get[B] = new Get[B] {		
-		var s = s0
-		var a = g(s)
-		var isFirstAlive = true
-		
-		def isAlive = isFirstAlive
+	def fsm[S,A,B](dtape: => Get[A], s0: S, f: (S,A) => S, g: S => B): Get[B] = {
+		lazy val tape = dtape
 
-		def step    = stepOnTick(tape) { 
-			isFirstAlive = tape.isAlive
-			s = f(s, tape.get)
-			a = g(s)			
+		new Get[B] {		
+			var s = s0
+			var a = g(s)
+			var isFirstAlive = true
+			
+			def isAlive = isFirstAlive
+
+			def step    = stepOnTick(tape) { 
+				isFirstAlive = tape.isAlive
+				s = f(s, tape.get)
+				a = g(s)			
+			}
+			var tick = true
+
+			def get     = a
 		}
-		var tick = true
-
-		def get     = a
 	}
+
 
 	def move[A,B](force: => Get[A], s0: B, append: (B, A) => B): Get[B] = 
 		fsm(force, s0, append, (x: B) => x)
@@ -258,33 +263,62 @@ object Get {
 	
 	// Lifters (Applicative functor)
 
-	def lift[A1,A2,B](f: (A1,A2)=>B, a1: Get[A1], a2: Get[A2]): Get[B] = new Get[B] {
-		def isAlive = a1.isAlive && a2.isAlive
-		def step    = stepOnTick(a1, a2) {}
-		def get     = f(a1.get, a2.get)
-		var tick    = a1.tick
+	def lift[A1,A2,B](f: (A1,A2)=>B, da1: => Get[A1], da2: => Get[A2]): Get[B] = {
+		lazy val a1 = da1
+		lazy val a2 = da2
+
+		new Get[B] {
+			def isAlive = a1.isAlive && a2.isAlive
+			def step    = stepOnTick(a1, a2) {}
+			def get     = f(a1.get, a2.get)
+			var tick    = a1.tick
+		}
 	}
 
-	def lift[A1,A2,A3,B](f: (A1,A2,A3)=>B, a1: Get[A1], a2: Get[A2], a3: Get[A3]): Get[B] = new Get[B] {
-		def isAlive = a1.isAlive && a2.isAlive && a3.isAlive
-		def step    = stepOnTick(a1, a2, a3) {}
-		def get     = f(a1.get, a2.get, a3.get)
-		var tick    = a1.tick
+	def lift[A1,A2,A3,B](f: (A1,A2,A3)=>B, da1: => Get[A1], da2: => Get[A2], da3: => Get[A3]): Get[B] = {
+		lazy val a1 = da1
+		lazy val a2 = da2		
+		lazy val a3 = da3
+
+		new Get[B] {
+			def isAlive = a1.isAlive && a2.isAlive && a3.isAlive
+			def step    = stepOnTick(a1, a2, a3) {}
+			def get     = f(a1.get, a2.get, a3.get)
+			var tick    = a1.tick
+		}
 	}
 
-	def lift[A1,A2,A3,A4,B](f: (A1,A2,A3,A4)=>B, a1: Get[A1], a2: Get[A2], a3: Get[A3], a4: Get[A4]): Get[B] = new Get[B] {
-		def isAlive = a1.isAlive && a2.isAlive && a3.isAlive && a4.isAlive
-		def step    = stepOnTick(a1, a2, a3, a4) {}
-		def get     = f(a1.get, a2.get, a3.get, a4.get)
-		var tick    = a1.tick
+
+	def lift[A1,A2,A3,A4,B](f: (A1,A2,A3,A4)=>B, da1: => Get[A1], da2: => Get[A2], da3: => Get[A3], da4: => Get[A4]): Get[B] = {
+		lazy val a1 = da1
+		lazy val a2 = da2		
+		lazy val a3 = da3		
+		lazy val a4 = da4
+
+		new Get[B] {
+			def isAlive = a1.isAlive && a2.isAlive && a3.isAlive && a4.isAlive
+			def step    = stepOnTick(a1, a2, a3, a4) {}
+			def get     = f(a1.get, a2.get, a3.get, a4.get)
+			var tick    = a1.tick
+		}
 	}
 
-	def lift[A1,A2,A3,A4,A5,B](f: (A1,A2,A3,A4,A5)=>B, a1: Get[A1], a2: Get[A2], a3: Get[A3], a4: Get[A4], a5: Get[A5]): Get[B] = new Get[B] {
-		def isAlive = a1.isAlive && a2.isAlive && a3.isAlive && a4.isAlive && a5.isAlive
-		def step    = stepOnTick(a1, a2, a3, a4, a5) {}
-		def get     = f(a1.get, a2.get, a3.get, a4.get, a5.get)
-		var tick    = a1.tick
+
+	def lift[A1,A2,A3,A4,A5,B](f: (A1,A2,A3,A4,A5)=>B, da1: => Get[A1], da2: => Get[A2], da3: => Get[A3], da4: => Get[A4], da5: => Get[A5]): Get[B] = {
+		lazy val a1 = da1
+		lazy val a2 = da2		
+		lazy val a3 = da3		
+		lazy val a4 = da4
+		lazy val a5 = da5
+
+		new Get[B] {
+			def isAlive = a1.isAlive && a2.isAlive && a3.isAlive && a4.isAlive && a5.isAlive
+			def step    = stepOnTick(a1, a2, a3, a4, a5) {}
+			def get     = f(a1.get, a2.get, a3.get, a4.get, a5.get)
+			var tick    = a1.tick
+		}
 	}
+
 
 }
 

@@ -12,6 +12,11 @@ object Vec {
 
 	def apply(a: Get[Float], b: Float): Get[Vec] = 
 		a.map(x => Vec(x, b))
+
+	def norm(angle: Float) = {
+		val a =  2 * Math.PI * angle.toDouble
+		Vec(Math.cos(a).toFloat, Math.sin(a).toFloat)
+	}
 }
 
 case class Vec(x: Float, y: Float) {
@@ -24,9 +29,12 @@ case class Vec(x: Float, y: Float) {
 
 	// aux
 
-	def magnitude: Float = Math.sqrt(this.mul(this)).toFloat
+	def magnitude: Float = Math.sqrt(this.mul(this)).toFloat	
+	def l1: Float = Math.abs(x) + Math.abs(y)
 	def normalize: Vec = this / this.magnitude
+	def norm: Vec = this / this.magnitude
 	def dist(that: Vec): Float = (this - that).magnitude
+	def l1(that: Vec): Float = (this - that).l1
 
 	def vel(v: => Get[Vec]) = 
 		Get.fsm(v, this, (a: Vec, b: Vec) => a + b, (x: Vec) => x)
@@ -49,11 +57,13 @@ case class Vec(x: Float, y: Float) {
 	def +(that: Get[Vec]): Get[Vec] = that.map(x => this + x)
 	def -(that: Get[Vec]): Get[Vec] = that.map(x => this - x)
 	def *(that: Get[Vec]): Get[Vec] = that.map(x => this * x)	
+	def unary_- : Vec = this * (-1)
 	
 	def mul(that: Get[Vec]): Get[Float] = that.map(x => this.mul(x)) 
 	def dist(that: Get[Vec]): Get[Float] = that.map(x => this.dist(x)) 
+	def l1(that: Get[Vec]): Get[Float] = that.map(x => this.l1(x)) 
 
-	def atan2: Float = ((Math.atan2(y, x) / (2 * Math.PI)).toFloat)
+	def atan2: Float = (Math.atan2(y, x) / (2 * Math.PI)).toFloat
 
 	// polar
 
@@ -111,8 +121,10 @@ case class Vec3(x: Float, y: Float, z: Float) {
 	// aux
 
 	def magnitude: Float = Math.sqrt(this.mul(this)).toFloat
+	def l1: Float = Math.abs(x) + Math.abs(y) + Math.abs(z)
 	def normalize: Vec3 = this / this.magnitude
 	def dist(that: Vec3): Float = (this - that).magnitude
+	def l1(that: Vec3): Float = (this - that).l1
 
 	def vel(v: => Get[Vec3]) = 
 		Get.fsm(v, this, (a: Vec3, b: Vec3) => a + b, (x: Vec3) => x)
@@ -135,9 +147,11 @@ case class Vec3(x: Float, y: Float, z: Float) {
 	def +(that: Get[Vec3]): Get[Vec3] = that.map(x => this + x)
 	def -(that: Get[Vec3]): Get[Vec3] = that.map(x => this - x)
 	def *(that: Get[Vec3]): Get[Vec3] = that.map(x => this * x)	
+	def unary_- : Vec3 = this * (-1)
 	
 	def mul(that: Get[Vec3]): Get[Float] = that.map(x => this.mul(x)) 
 	def dist(that: Get[Vec3]): Get[Float] = that.map(x => this.dist(x)) 
+	def l1(that: Get[Vec3]): Get[Float] = that.map(x => this.l1(x)) 
 
 	// polar
 
@@ -181,7 +195,9 @@ case class Rect(x: Float, y: Float, w: Float, h: Float)
 
 case class Body(m: Float, pos: Vec, vel: Vec, velLimit: Float = 10) {
 
-	def move(force: => Get[Vec]): Get[Body] = {
+	def move(dforce: => Get[Vec]): Get[Body] = {
+		lazy val force = dforce
+
 		val getVel = vel.vel(force.map(x => x / m)).map((v: Vec) => if (v.magnitude > velLimit) (v.normalize * velLimit) else v)
 		val getPos = pos.vel(getVel)
 		Get.lift((p: Vec, v: Vec) => Body(m, p, v, velLimit), getPos, getVel)
