@@ -349,6 +349,12 @@ object P {
 	case object PDF				extends Renderer { def toProc = PConstants.PDF }
 
 
+	object Pde {
+		def apply(name: String, setup: => Unit, draw: => Unit) {
+			runApp(name, () => setup, () => draw)
+		}
+	}
+
 	case class Win(
 		name: String = "App", 
 		size: Vec = Vec(500, 500), 
@@ -410,6 +416,10 @@ object P {
 			}
 
 			runApp(name, mySetup, myDraw)
+		}
+
+		def pde(setup: => Unit, draw: => Unit) {
+			runApp(name, () => { winInits(); setup }, () => draw)
 		}
 	}
 
